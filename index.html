@@ -2,38 +2,123 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Big Random Number</title>
   <style>
     html, body {
       height: 100%;
       margin: 0;
       background: #ffffff;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
+      font-family: Arial, Helvetica, sans-serif;
     }
     #num {
-      font-family: Arial, Helvetica, sans-serif;
       font-weight: 900;
-      font-size: 90vh; /* nearly full screen height */
+      font-size: 88vh;
       line-height: 1;
       color: #000;
       user-select: none;
       text-align: center;
     }
+
+    #pace {
+      position: fixed;
+      left: 50%;
+      bottom: max(16px, env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.92);
+      border: 2px solid #000;
+      border-radius: 14px;
+      transition: opacity 250ms ease;
+    }
+    #pace.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #pace button {
+      font: 700 20px/1 Arial, Helvetica, sans-serif;
+      min-width: 84px;
+      padding: 14px 16px;
+      color: #000;
+      background: #fff;
+      border: 2px solid #000;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    #pace button[aria-pressed="true"] {
+      background: #000;
+      color: #fff;
+    }
+    #pace button:focus-visible {
+      outline: 3px solid #0a58ff;
+      outline-offset: 3px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #pace { transition: none; }
+    }
   </style>
 </head>
 <body>
   <div id="num">1</div>
+
+  <div id="pace" role="group" aria-label="Number speed">
+    <button type="button" data-ms="500">0.5 sec</button>
+    <button type="button" data-ms="1000">1 sec</button>
+    <button type="button" data-ms="2000" aria-pressed="true">2 sec</button>
+  </div>
+
   <script>
     const el = document.getElementById('num');
+    const pace = document.getElementById('pace');
+    const buttons = Array.from(pace.querySelectorAll('button'));
+
+    let current = 1;
+    let timer = null;
+    let hideTimer = null;
+
     function changeNumber() {
-      const newNum = Math.floor(Math.random() * 9) + 1; // random 1–9
-      el.textContent = newNum;
+      // Pick from 1-8, then skip over the current number so it never repeats.
+      let next = Math.floor(Math.random() * 8) + 1;
+      if (next >= current) next += 1;
+      current = next;
+      el.textContent = String(current);
     }
-    setInterval(changeNumber, 2000); // every 2 seconds
+
+    function setPace(ms) {
+      clearInterval(timer);
+      timer = setInterval(changeNumber, ms);
+      buttons.forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.ms) === ms)));
+    }
+
+    function showControls() {
+      pace.classList.remove('hidden');
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => pace.classList.add('hidden'), 4000);
+    }
+
+    buttons.forEach(b => {
+      b.addEventListener('click', () => {
+        setPace(Number(b.dataset.ms));
+        changeNumber();
+        showControls();
+      });
+    });
+
+    document.addEventListener('pointerdown', showControls);
+    document.addEventListener('keydown', showControls);
+
+    setPace(2000);
+    showControls();
   </script>
 </body>
 </html>
